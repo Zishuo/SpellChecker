@@ -60,14 +60,11 @@ int main(int argc, char* argv[])
         }
     }
     servers.close();
+
     //shuffle the address book.
     std::random_device rd;
     std::mt19937 g(rd());
     shuffle(addresses.begin(),addresses.end(),g);
-    for(auto ads : addresses)
-    {
-        cerr << ads.first << "\t" << ads.second << endl;
-    }
 
     //read words from command line and split them by space.
     //put each word into vector as a string.
@@ -84,7 +81,7 @@ int main(int argc, char* argv[])
         fail = false;
         try
         {
-            cerr << "querying " << ads->first << "\t" << ads->second << endl;
+            cerr << "querying : " << ads->first << "\t" << ads->second << endl;
             boost::shared_ptr<TSocket> socket(new TSocket(ads->first, ads->second));
             boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
             boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
