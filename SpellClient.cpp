@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
         return 3;
     }
 
-    boost::shared_ptr<TTransport> socket(new TSocket(argv[1], port));
+    boost::shared_ptr<Tsocket> socket(new TSocket(argv[1], port));
     boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
     boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
 
