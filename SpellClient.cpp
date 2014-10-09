@@ -1,5 +1,8 @@
 #include <arpa/inet.h>
+#include <algorithm>
+#include <fstream>
 #include <iostream>
+#include <random>
 #include <sstream>
 
 //boost
@@ -15,77 +18,123 @@
 using namespace apache::thrift;
 using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
-
+using namespace std;
 int main(int argc, char* argv[])
 {
-    if(argc < 3)
+    if(argc < 2)
     {
-        std::cerr << "Usage : SpellClient {ip} {port} {\"word1 word2 ...\"}"<<std::endl;
-        return 1;
-    }
-
-    //read server ip from command line and validate it.
-    struct sockaddr_in sa;
-    if(inet_pton(AF_INET, argv[1], &(sa.sin_addr)) == 0)
-    {
-        std::cerr << "invalid ip address." << std::endl;
+        cerr << "Usage : SpellClient {server list filename} {\"word1 word2 ...\"}"<<std::endl;
         return 2;
     }
 
-    //read port from command line and validate it
-    int port = 0;
-    try
+    //read server ips and ports from file and validate it.
+    ifstream servers(argv[1]);
+    if(!servers.is_open())
     {
-        port = std::stoi(argv[2]);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << "invalid ip port." << std::endl;
+        cerr << "Can not open servers list file." << std::endl;
         return 3;
     }
 
-    boost::shared_ptr<TTransport> socket(new TSocket(argv[1], port));
-    boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
-    boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
-
-    SpellServiceClient client(protocol);
-    SpellRequest request;
-    SpellResponse response;
+    vector<pair<string,unsigned short>> addresses;
+    string ip;
+    int port;
+    while(servers >> ip)
+    {
+        bool valide = true;
+        struct sockaddr_in sa;
+        if(inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr)) == 0)
+        {
+            valide = false;
+            cerr << "invalid ip address " << ip << endl;
+        }
+        servers >> port;
+        if( port < 0 || port > 65535)
+        {
+            valide = false;
+            cerr << "invalid tcp port : " << port << endl;
+        }
+        if(valide)
+        {
+            addresses.push_back(make_pair(ip,port));
+            cerr << "server : " << ip << "\t" << port << endl;
+        }
+    }
+    servers.close();
+    //shuffle the address book.
+    std::random_device rd;
+    std::mt19937 g(rd());
+    shuffle(addresses.begin(),addresses.end(),g);
+    for(auto ads : addresses)
+    {
+        cerr << ads.first << "\t" << ads.second << endl;
+    }
 
     //read words from command line and split them by space.
     //put each word into vector as a string.
-    std::istringstream iss(argv[3]);
-    std::copy(std::istream_iterator<std::string>(iss),
-              std::istream_iterator<std::string>(),back_inserter(request.to_check));
-    try
+    SpellRequest request;
+    istringstream iss(argv[2]);
+    copy(std::istream_iterator<std::string>(iss),
+         istream_iterator<std::string>(),back_inserter(request.to_check));
+
+    SpellResponse response;
+    bool fail = true;
+    unsigned int timeout = 2000;
+    for(auto ads = addresses.begin();  ads != addresses.end(); ++ads)
     {
-        //measure the response time
-        boost::progress_timer t;
-        //open thrift transport connection
-        transport->open();
-        //request
-        client.spellcheck(response,request);
-    }
-    catch(const TException &e)
-    {
-        std::cerr << e.what() << std::endl;
-        return 4;
+        fail = false;
+        try
+        {
+            cerr << "querying " << ads->first << "\t" << ads->second << endl;
+            boost::shared_ptr<TSocket> socket(new TSocket(ads->first, ads->second));
+            boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+            boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+            SpellServiceClient client(protocol);
+
+            //timeout
+            socket->setConnTimeout(timeout);
+            socket->setRecvTimeout(timeout);
+            socket->setSendTimeout(timeout);
+            //measure the response time
+            boost::progress_timer t;
+            //open thrift transport connection
+            transport->open();
+            //request
+            client.spellcheck(response,request);
+        }
+        catch(...)
+        {
+            fail = true;
+        }
+
+        if(!fail)
+        {
+            break;
+        }
     }
 
-    //output response
-    for(auto i = response.is_correct.begin(); i != response.is_correct.end(); ++i)
+    if(fail)
     {
-        if(*i)
+        cerr << "All servers down, cannot check spells." << endl;
+        return 1;
+    }
+    else
+    {
+        //output response
+        for(auto i = response.is_correct.begin(); i != response.is_correct.end(); ++i)
         {
-            std::cout << "hit";
+            if(*i)
+            {
+                cout << "hit";
+            }
+            else
+            {
+                cout << "miss";
+            }
+            cout << "\t\t";
+            cout << request.to_check[std::distance(response.is_correct.begin(),i)]
+                 << endl;
         }
-        else
-        {
-            std::cout << "miss";
-        }
-        std::cout << "\t\t";
-        std::cout << request.to_check[std::distance(response.is_correct.begin(),i)]
-                  << std::endl;
+
     }
     return 0;
 }
