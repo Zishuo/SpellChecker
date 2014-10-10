@@ -30,7 +30,7 @@ using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
 using namespace apache::thrift::server;
 
-//inherit from SpellServiceIf, overload the pure virtual function to 
+//inherit from SpellServiceIf, overload the pure virtual function to
 //implement business logic.
 class SpellCheckHandler : public SpellServiceIf
 {
@@ -42,10 +42,10 @@ public:
     {
         BOOST_LOG_TRIVIAL(debug) << "recieve spell check request";
         BOOST_LOG_TRIVIAL(trace) << "size " << request.to_check.size();
-       
+
         const std::vector<std::string> &to_check = request.to_check;
         std::vector<bool> is_correct;
-        //travesal requested words 
+        //travesal requested words
         for(auto &word : to_check)
         {
             //found in dic
@@ -89,12 +89,15 @@ int main(int argc, char * argv[])
         std::cerr << "Usage : " << "{port} " << " {dictionary file} " <<" [log severity level = 2]"<<std::endl;
         return 1;
     }
-    
+
     //read port and validate
     int port = 0;
-    try{
+    try
+    {
         port = std::stoi(argv[1]);
-    }catch(const std::exception& e){
+    }
+    catch(const std::exception& e)
+    {
         BOOST_LOG_TRIVIAL(fatal) << "invalid port number : " << argv[1];
         return 2;
     }
@@ -111,9 +114,12 @@ int main(int argc, char * argv[])
     int severity = 2;
     if(argc == 4)
     {
-        try{
-        severity = std::stoi(argv[3]);
-        }catch(const std::exception& e){
+        try
+        {
+            severity = std::stoi(argv[3]);
+        }
+        catch(const std::exception& e)
+        {
             BOOST_LOG_TRIVIAL(warning) <<"input log severity : " <<e.what();
         }
     }
@@ -130,18 +136,24 @@ int main(int argc, char * argv[])
     BOOST_LOG_TRIVIAL(info) << "load dictionary done.";
 
     boost::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+    boost::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
     boost::shared_ptr<SpellCheckHandler> handler(new SpellCheckHandler(dic));
     boost::shared_ptr<TProcessor> processor(new SpellServiceProcessor(handler));
-    boost::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-    boost::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+    boost::shared_ptr<TServerTransport> serverTransport;
+    try{
+        serverTransport = boost::shared_ptr<TServerTransport>(new TServerSocket(port)); 
+    }catch(...){
+    
+    }
 
     //alternatives : TThreadedServer,TThreadPoolServer
     TSimpleServer server(processor,
                          serverTransport,
                          transportFactory,
                          protocolFactory);
-
+    
     BOOST_LOG_TRIVIAL(info) << "server running...";
+    //it catches all exeptions inside it.
     server.serve();
     BOOST_LOG_TRIVIAL(info) << "server stoped.";
     return 0;
