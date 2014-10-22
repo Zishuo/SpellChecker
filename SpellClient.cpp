@@ -36,9 +36,9 @@ using namespace apache::thrift::transport;
 using namespace std;
 int main(int argc, char* argv[])
 {
-    if(argc < 2)
+    if(argc < 3)
     {
-        cerr << "Usage : SpellClient {server list filename} {\"word1 word2 ...\"}"<<std::endl;
+        cerr << "Usage : SpellClient {server list filename} {timeout(ms)} {\"word1 word2 ...\"}"<<std::endl;
         return 2;
     }
 
@@ -81,16 +81,27 @@ int main(int argc, char* argv[])
     std::mt19937 random_generator(seed());
     shuffle(addresses.begin(),addresses.end(),random_generator);
 
+    //read timeout
+    unsigned int timeout = 2000;
+    try
+    {
+        timeout = stoi(argv[2]);
+    }
+    catch(...)
+    {
+        cerr << "invalid timeout : " << argv[2] << endl;
+        return 4;
+    }
+
     //read words from command line and split them by space.
     //put each word into vector as a string.
     SpellRequest request;
-    istringstream iss(argv[2]);
+    istringstream iss(argv[3]);
     copy(std::istream_iterator<std::string>(iss),
          istream_iterator<std::string>(),back_inserter(request.to_check));
 
     SpellResponse response;
     bool fail = true;
-    unsigned int timeout = 2000;
     for(auto ads = addresses.begin();  ads != addresses.end(); ++ads)
     {
         fail = false;
