@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(SpellCheck)
 
 set(CMAKE_CXX_COMPILER /usr/bin/g++)
-set(CMAKE_CXX_FLAGS "-std=c++11")
+set(CMAKE_CXX_FLAGS "-std=c++11 -Wall")
 
 find_package(Boost 1.55.0 REQUIRED COMPONENTS thread log system)
 if(Boost_FOUND)

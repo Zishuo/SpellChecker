@@ -62,9 +62,9 @@ int main(int argc, char* argv[])
     servers.close();
 
     //shuffle the address book.
-    std::random_device rd;
-    std::mt19937 g(rd());
-    shuffle(addresses.begin(),addresses.end(),g);
+    std::random_device seed;
+    std::mt19937 random_generator(seed());
+    shuffle(addresses.begin(),addresses.end(),random_generator);
 
     //read words from command line and split them by space.
     //put each word into vector as a string.

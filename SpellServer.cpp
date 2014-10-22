@@ -139,22 +139,22 @@ int main(int argc, char * argv[])
     boost::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
     boost::shared_ptr<SpellCheckHandler> handler(new SpellCheckHandler(dic));
     boost::shared_ptr<TProcessor> processor(new SpellServiceProcessor(handler));
-    boost::shared_ptr<TServerTransport> serverTransport;
-    try{
-        serverTransport = boost::shared_ptr<TServerTransport>(new TServerSocket(port)); 
-    }catch(...){
-    
-    }
+    boost::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
 
     //alternatives : TThreadedServer,TThreadPoolServer
-    TSimpleServer server(processor,
-                         serverTransport,
-                         transportFactory,
-                         protocolFactory);
-    
-    BOOST_LOG_TRIVIAL(info) << "server running...";
-    //it catches all exeptions inside it.
-    server.serve();
-    BOOST_LOG_TRIVIAL(info) << "server stoped.";
+    try
+    {
+        TSimpleServer server(processor,
+                             serverTransport,
+                             transportFactory,
+                             protocolFactory);
+        BOOST_LOG_TRIVIAL(info) << "server running...";
+    }
+    catch(const std::exception& e)
+    {
+        BOOST_LOG_TRIVIAL(info) << e.what();
+        BOOST_LOG_TRIVIAL(info) << "server stoped.";
+    }
+
     return 0;
 }
