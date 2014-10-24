@@ -163,6 +163,7 @@ int main(int argc, char * argv[])
                              serverTransport,
                              transportFactory,
                              protocolFactory);
+        server.serve();
         BOOST_LOG_TRIVIAL(info) << "server running...";
     }
     catch(const std::exception& e)
