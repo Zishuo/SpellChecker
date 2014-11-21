@@ -50,11 +50,6 @@ int main(int argc, char* argv[])
         return 3;
     }
 
-<<<<<<< HEAD
-    boost::shared_ptr<Tsocket> socket(new TSocket(argv[1], port));
-    boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
-    boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
-=======
     vector<pair<string,unsigned short>> addresses;
     string ip;
     int port;
@@ -80,7 +75,6 @@ int main(int argc, char* argv[])
         }
     }
     servers.close();
->>>>>>> fault-tolerence
 
     //shuffle the address book.
     std::random_device seed;
