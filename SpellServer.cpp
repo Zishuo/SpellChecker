@@ -1,3 +1,18 @@
+//Copyright (C) <2014>  <Zishuo Wang>
+//
+//This program is free software: you can redistribute it and/or modify
+//it under the terms of the GNU General Public License as published by
+//the Free Software Foundation, either version 3 of the License, or
+//(at your option) any later version.
+//
+//This program is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//GNU General Public License for more details.
+//
+//You should have received a copy of the GNU General Public License
+//along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
@@ -30,7 +45,7 @@ using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
 using namespace apache::thrift::server;
 
-//inherit from SpellServiceIf, overload the pure virtual function to 
+//inherit from SpellServiceIf, overload the pure virtual function to
 //implement business logic.
 class SpellCheckHandler : public SpellServiceIf
 {
@@ -42,10 +57,10 @@ public:
     {
         BOOST_LOG_TRIVIAL(debug) << "recieve spell check request";
         BOOST_LOG_TRIVIAL(trace) << "size " << request.to_check.size();
-       
+
         const std::vector<std::string> &to_check = request.to_check;
         std::vector<bool> is_correct;
-        //travesal requested words 
+        //travesal requested words
         for(auto &word : to_check)
         {
             //found in dic
@@ -89,12 +104,15 @@ int main(int argc, char * argv[])
         std::cerr << "Usage : " << "{port} " << " {dictionary file} " <<" [log severity level = 2]"<<std::endl;
         return 1;
     }
-    
+
     //read port and validate
     int port = 0;
-    try{
+    try
+    {
         port = std::stoi(argv[1]);
-    }catch(const std::exception& e){
+    }
+    catch(const std::exception& e)
+    {
         BOOST_LOG_TRIVIAL(fatal) << "invalid port number : " << argv[1];
         return 2;
     }
@@ -111,9 +129,12 @@ int main(int argc, char * argv[])
     int severity = 2;
     if(argc == 4)
     {
-        try{
-        severity = std::stoi(argv[3]);
-        }catch(const std::exception& e){
+        try
+        {
+            severity = std::stoi(argv[3]);
+        }
+        catch(const std::exception& e)
+        {
             BOOST_LOG_TRIVIAL(warning) <<"input log severity : " <<e.what();
         }
     }
@@ -130,19 +151,26 @@ int main(int argc, char * argv[])
     BOOST_LOG_TRIVIAL(info) << "load dictionary done.";
 
     boost::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+    boost::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
     boost::shared_ptr<SpellCheckHandler> handler(new SpellCheckHandler(dic));
     boost::shared_ptr<TProcessor> processor(new SpellServiceProcessor(handler));
     boost::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-    boost::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
 
     //alternatives : TThreadedServer,TThreadPoolServer
-    TSimpleServer server(processor,
-                         serverTransport,
-                         transportFactory,
-                         protocolFactory);
+    try
+    {
+        TSimpleServer server(processor,
+                             serverTransport,
+                             transportFactory,
+                             protocolFactory);
+        server.serve();
+        BOOST_LOG_TRIVIAL(info) << "server running...";
+    }
+    catch(const std::exception& e)
+    {
+        BOOST_LOG_TRIVIAL(info) << e.what();
+        BOOST_LOG_TRIVIAL(info) << "server stoped.";
+    }
 
-    BOOST_LOG_TRIVIAL(info) << "server running...";
-    server.serve();
-    BOOST_LOG_TRIVIAL(info) << "server stoped.";
     return 0;
 }
