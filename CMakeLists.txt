@@ -29,6 +29,7 @@ if(UNIX)
 		pthread
         SpellService
         thrift
+        crypto 
 		)
 	target_link_libraries(
         SpellServer

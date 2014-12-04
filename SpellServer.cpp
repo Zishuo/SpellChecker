@@ -67,12 +67,12 @@ public:
             if(dic_.find(word) != dic_.end())
             {
                 is_correct.push_back(true);
-                BOOST_LOG_TRIVIAL(trace) <<"hit\t"<<word;
+                BOOST_LOG_TRIVIAL(trace) << word << "hit\t" <<word;
             }
             else
             {
                 is_correct.push_back(false);
-                BOOST_LOG_TRIVIAL(trace) <<"miss\t"<<word;
+                BOOST_LOG_TRIVIAL(trace) << word << "miss\t" <<word;
             }
         }
 
