@@ -37,6 +37,7 @@ using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
 using namespace std;
 
+//Create a Thrift Client to check words.
 class WordChecker
 {
 public:
@@ -80,6 +81,7 @@ private:
 };
 unsigned int WordChecker::timeout = 2000;
 
+//Decide word which shard to go.
 class WordDispatcher
 {
 public:
@@ -99,6 +101,7 @@ private:
 
 };
 
+//For each Shard, do a fault tolerence query.
 class ShardTask
 {
 public:
@@ -126,8 +129,7 @@ private:
     const vector<pair<string, unsigned short>>& shard_list_;
 };
 
-
-
+//load server list
 int load_server_list(vector<pair<string,unsigned short>>& list1 ,vector<pair<string,unsigned short>>& list2, char shard1_name[], char shard2_name[])
 {
 
@@ -204,6 +206,7 @@ int main(int argc, char* argv[])
         return 2;
     }
 
+    //read server list files
     vector<pair<string,unsigned short>> list1;
     vector<pair<string,unsigned short>> list2;
     load_server_list(list1,list2,argv[1],argv[2]);
@@ -232,37 +235,36 @@ int main(int argc, char* argv[])
          istream_iterator<std::string>(),back_inserter(request));
 
     WordDispatcher dsp;
-    //reserve the words original order.
+    //preserve original order.
     vector<pair<size_t,size_t>> mapper;
+    
+    //words to be sent to shards
     vector<string> shard1_words;
     vector<string> shard2_words;
     for(auto& i : request)
     {
-        //convert word to lowercase
-        string lower;
-        lower.resize(i.size());
-        transform(i.begin(), i.end(), lower.begin(), ::tolower);
+        //no need to lowercase 
         
         //dispatch word to shard
         unsigned int shard = dsp.dispatch(i);
         if(shard == 0)
         {
             mapper.push_back(make_pair(0,shard1_words.size()));
-            shard1_words.push_back(move(lower));
+            shard1_words.push_back(i);
         }
         if(shard == 1)
         {
             mapper.push_back(make_pair(1,shard2_words.size()));
-            shard2_words.push_back(move(lower));
+            shard2_words.push_back(i);
         }
     }
 
-    //
     ShardTask task1(list1);
     ShardTask task2(list2);
     vector<bool> shard1_result;
     vector<bool> shard2_result;
-    
+   
+    //do concurrently queries. 
     thread worker1(&ShardTask::Query,task1,ref(shard1_result),ref(shard1_words));
     thread worker2(&ShardTask::Query,task2,ref(shard2_result),ref(shard2_words));
     
@@ -270,6 +272,7 @@ int main(int argc, char* argv[])
     worker1.join();
     worker2.join();
 
+    //print all words true/false in original order.
     for(size_t i = 0; i != request.size(); ++i)
     {
         if(mapper[i].first == 0)
